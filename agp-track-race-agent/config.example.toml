@@ -1,0 +1,37 @@
+# config.toml として保存して編集してください。認証トークンは書かないでください。
+
+[mcp]
+# Codex の agp-track-race 設定だけを実行時に参照します。
+# 認証情報をこのファイルへ複製しないでください。
+source = "codex"
+codex_config = "~/.codex/config.toml"
+# 空文字なら Agent の実行ディレクトリを使います。相対パスが必要な MCP は明示してください。
+working_directory = ""
+# 初期化に使う MCP プロトコル版。失敗時は旧版・新版を安全に再試行します。
+protocol_version = "2025-03-26"
+# source = "direct" の場合だけ、次の command / args / required_env を設定します。
+# command = ""
+# args = []
+# required_env = ["AGP_MCP_TOKEN"]
+# working_directory = ""
+
+[budget]
+# クレジット上限。$1 を超える設定はアプリケーションが拒否します。
+max_usd = 1.00
+
+[limits]
+max_questions_per_point = 12
+max_guesses_per_point = 3
+
+[solver]
+# ChatGPT でログイン済みの Codex CLI を使います。API キーは使用しません。
+command = "python -m agp_race_agent.codex_solver"
+
+[logging]
+directory = "logs"
+
+[monitor]
+# 各確認完了後の待機秒数。最短60秒、既定60秒。
+interval_seconds = 60
+# 設定ファイルのディレクトリを基準に保存。複数監視では同じファイルを共有。
+seen_file = "monitor-seen.sqlite3"

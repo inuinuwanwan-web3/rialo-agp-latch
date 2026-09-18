@@ -1,0 +1,8 @@
+[project]
+name = "agp-track-race-agent"
+version = "0.1.0"
+description = "Budget-capped, auditable AGP Track Race MCP agent"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
