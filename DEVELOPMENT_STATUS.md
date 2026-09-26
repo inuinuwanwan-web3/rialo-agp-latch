@@ -61,3 +61,77 @@ TIME_WINDOW, with explicit authorization, execute a single Real ALLOW smoke
 invocation once to inspect its fetch failure category. No retry, fallback or
 second smoke invocation. One MCP invocation may perform an authorization fetch
 and, if allowed, one proxy fetch; it does not mean one HTTP transaction.
+
+## 2026-09-26: end-of-day work record (JST)
+
+The following user-confirmed results are the latest status and supersede the
+earlier Real ALLOW pending/failed status and next-step notes above and in the
+README. This entry records completed work; no development, fixes, tests, live
+calls, or AGP writes were performed to prepare this record. Runtime changes
+described here do not imply that their code or configuration was published in
+this documentation-only update.
+
+### Latch Real ALLOW single verification: SUCCESS
+
+- Model: `gpt-4o-mini`.
+- `dispatch_count`: **1**.
+- Latch response received: **YES**.
+- Output contract: **PASS**.
+- Retry: **0**; fallback: **NONE**.
+- AGP writes: **0**; secrets exposed: **0**.
+
+### AGP solver routing and offline verification
+
+AGP `solver.command` was switched to the verified Latch CLI path.
+AGP source was not changed, and a rollback path exists.
+
+Post-switch offline verification:
+
+- Question path: **PASS**.
+- Guess path: **PASS**.
+- DENY fail-closed: **PASS**.
+- FETCH_FAILED fail-closed: **PASS**.
+- Codex fallback: **NONE**.
+- Retry: **0**; fallback: **NONE**.
+
+### AGP MCP read-only checks and production write gate
+
+Read-only checks were completed for `list_tracks`, `my_race`, `sigil_balance`,
+and `track_state`. AGP writes: **0**.
+
+The production write gate remains closed because the new Track has not yet been
+published. After publication, confirm the following actual values read-only:
+
+- Join Window / registration.
+- Phase / started.
+- Deadline.
+- Track/race/run correspondence.
+- Credit / spend conditions.
+
+Only afterward determine the authorization conditions for `start_track`, `ask`,
+and `guess`. This record does not authorize those operations.
+
+### AGP Watch status
+
+- systemd service enabled: **YES**.
+- Active/running: **NO**.
+- MainPID: **0**.
+- Polling functional: **NO**.
+- `Restart=on-failure` is causing repeated restarts.
+- Last confirmed successful poll: **2026-09-24 01:28:56 JST**.
+- Current blocker: preflight stops because AUTH environment configuration is
+  not loaded correctly. The exact loader root cause remains unconfirmed.
+- Telegram routing configuration exists, but actual notification delivery is
+  unverified while Watch is stopped.
+- Current state is **not new-Track waiting READY**.
+
+### Next session starting point
+
+Resume with read-only AUTH loader root-cause identification at `config.py:750`:
+compare the `config.toml` actually loaded by the systemd service with the
+location storing AUTH under `[mcp_servers.agp-track-race.env]`, without displaying
+secret values.
+
+Subsequent planned sequence: minimum AUTH fix → restore Watch active/running →
+confirm successful polling → confirm actual Telegram delivery → new-Track
+waiting READY. These steps were not performed as part of this record.
