@@ -16,11 +16,12 @@ The development-session checks established:
   transport verified.
 - One-dispatch / retries 0 / no fallback safety model for the Latch smoke path.
 - Guarded live-ALLOW entry point implemented.
-- Latest focused Latch tests: **113 passed / 0 failed**.
+- Latest focused diagnostic tests (2026-09-26): **142 passed / 0 failed**.
 - AGP production source remained unchanged during Latch isolation work.
 
 These are recorded development milestones, not claims of production readiness.
-Real ALLOW remains runtime-unverified. `start_track` occurs outside the current
+Real ALLOW has not succeeded. The latest diagnostic attempt returned an MCP fetch error;
+safe fetch root-cause categories are now implemented but not yet live-verified. `start_track` occurs outside the current
 solver gate and is not yet protected by this Latch boundary. No points, rewards,
 airdrop eligibility, or completed live race are claimed.
 
@@ -39,7 +40,7 @@ Python 3.11+, Node.js, and pytest are needed for the focused contracts. From thi
 repository root, using a separately prepared Python environment:
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$PWD/agp-track-race-agent:$PWD/latch-work" python -B -m pytest --disable-plugin-autoload -p no:cacheprovider --confcutdir=latch-work --rootdir=latch-work -q latch-work/test_latch_allow_smoke_contract.py latch-work/test_latch_mcp_transport_contract.py latch-work/test_latch_proxy_contract.py
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$PWD/agp-track-race-agent:$PWD/latch-work" python -B -m pytest --disable-plugin-autoload -p no:cacheprovider --confcutdir=latch-work --rootdir=latch-work -q latch-work/test_latch_fetch_diagnostic.py latch-work/test_latch_safe_diagnostic.py latch-work/test_latch_allow_smoke_contract.py latch-work/test_latch_mcp_transport_contract.py
 ```
 
 These tests use synthetic fixtures. They do not launch registered live MCP or

@@ -13,6 +13,7 @@ import tomllib
 
 from agp_race_agent.solver import SolverError
 from latch_mcp_transport import _unique, _invalid_constant
+from latch_safe_diagnostic import SafeDiagnostic
 
 PROBE = {"method": "GET", "path": "/__latch_policy_denial_probe__"}
 SERVER = os.environ.get("LATCH_MCP_SERVER", "latch")
@@ -25,6 +26,7 @@ class RegisteredLatchClient:
         self.connected = False
         self._used = False
         self._lock = threading.Lock()
+        self.diagnostic = SafeDiagnostic()
 
     @property
     def retries(self):
@@ -37,6 +39,7 @@ class RegisteredLatchClient:
         return "latch_deny_fetch_guard.cjs"
 
     def call_tool(self, name, arguments, *, timeout_seconds):
+        self.diagnostic.stage('LOCAL_PRECHECK', 'LOCAL_GUARD')
         if not self._lock.acquire(blocking=False):
             raise SolverError("Registered Latch MCP failed closed") from None
         proc = None
@@ -49,6 +52,7 @@ class RegisteredLatchClient:
                 raise ValueError()
             self._used = True
             deadline = time.monotonic() + timeout_seconds
+            self.diagnostic.stage('LOCAL_PRECHECK', 'CONFIG')
             config = tomllib.loads((Path.home() / '.codex/config.toml').read_text())
             registration = config['mcp_servers'][SERVER]
             if registration.get('enabled', True) is not True or registration['command'] != 'npx':
@@ -58,6 +62,7 @@ class RegisteredLatchClient:
                 raise ValueError()
             # Resolve only an already cached copy of the registered package.
             matches = []
+            self.diagnostic.stage('LOCAL_PRECHECK', 'CACHE')
             for lock in (Path.home() / '.npm/_npx').glob('*/package-lock.json'):
                 metadata = json.loads(lock.read_text())
                 package = metadata.get('packages', {}).get('node_modules/latch-mcp-server', {})
@@ -69,12 +74,14 @@ class RegisteredLatchClient:
                 raise ValueError()
             env = {key: os.environ[key] for key in ('PATH', 'HOME', 'LANG') if key in os.environ}
             configured = registration['env']
+            self.diagnostic.stage('LOCAL_PRECHECK', 'ENVIRONMENT')
             if set(configured) != {'LATCH_ID', 'LATCH_LINK', 'LATCH_TOKEN', 'LATCH_URL'}:
                 raise ValueError()
             if any(type(v) is not str or not v for v in configured.values()):
                 raise ValueError()
             env.update(configured)
             env['LATCH_SMOKE_TIMEOUT_MS'] = str(max(1, int(timeout_seconds * 1000)))
+            self.diagnostic.stage('MCP_START', 'PROCESS_START')
             node = shutil.which('node')
             if not node:
                 raise ValueError()
@@ -111,6 +118,7 @@ class RegisteredLatchClient:
                             raise ValueError()
                         buffer += chunk
 
+                self.diagnostic.stage('MCP_START', 'HANDSHAKE')
                 write({'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {
                     'protocolVersion': '2024-11-05', 'capabilities': {},
                     'clientInfo': {'name': 'isolated-latch-smoke', 'version': '1'}}})
@@ -122,10 +130,17 @@ class RegisteredLatchClient:
                 self.connected = True
                 write({'jsonrpc': '2.0', 'method': 'notifications/initialized'})
                 self.dispatch_count += 1
+                self.diagnostic.stage('MCP_DISPATCH', 'MCP_WRITE')
+                # Means write attempted, not proof of server receipt.
+                self.diagnostic.mark('mcp_call_started')
                 write({'jsonrpc': '2.0', 'id': 2, 'method': 'tools/call',
                        'params': {'name': name, 'arguments': expected}})
-                return read(2)
-        except Exception:
+                self.diagnostic.stage('MCP_RESPONSE', 'MCP_READ')
+                result = read(2)
+                self.diagnostic.mark('mcp_response_received')
+                return result
+        except Exception as error:
+            self.diagnostic.fail(error)
             raise SolverError("Registered Latch MCP failed closed") from None
         finally:
             if proc is not None:

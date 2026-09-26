@@ -5,6 +5,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from latch_smoke_request import allow_request
+from latch_safe_diagnostic import SafeDiagnostic
 
 
 def inside_window():
@@ -45,20 +46,27 @@ def main(argv=None, *, client_factory=None, window_check=None):
         print('{"result":"REFUSED","dispatch_count":0}')
         return 2
     # Only offline tests inject a factory/clock. CLI has no alternate client option.
+    diagnostic = SafeDiagnostic()
     try:
         if not (window_check or inside_window)():
             print('{"result":"OUTSIDE_TIME_WINDOW","dispatch_count":0}')
             return 2
+        diagnostic.stage('CLIENT_INIT', 'IMPORT')
         from latch_registered_client import RegisteredAllowLatchClient
         from latch_mcp_transport import LatchMcpTransport
+        diagnostic.stage('CLIENT_INIT', 'LOCAL_GUARD')
         client = (client_factory or RegisteredAllowLatchClient)(execute_live_allow=True)
-        response = LatchMcpTransport(client, timeout_seconds=50).smoke_allow(
+        client.diagnostic = diagnostic
+        response = LatchMcpTransport(client, timeout_seconds=50, diagnostic=diagnostic).smoke_allow(
             allow_request(), execute_live_allow=True)
+        diagnostic.stage('RESPONSE_VALIDATE', 'COMPLETION_SCHEMA')
         validate_completion(response)
         print('{"result":"PASS","dispatch_count":1,"retries":0}')
         return 0
-    except Exception:
+    except Exception as error:
         # Never emit raw diagnostics, headers, model text, config, or environment.
+        diagnostic.fail(error)
+        print(json.dumps(diagnostic.snapshot()), file=sys.stderr)
         print('{"result":"FAILED_CLOSED","retries":0,"fallback":"NONE"}')
         return 2
 

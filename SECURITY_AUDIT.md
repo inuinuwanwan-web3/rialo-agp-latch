@@ -24,3 +24,22 @@ The full historical AGP regression suite was not rerun.
 
 These checks reduce publication risk; they do not certify production security.
 Future commits need the same review, even when ignore rules are present.
+
+
+## 2026-09-26 diagnostic publication audit
+
+Scope: the ALLOW fetch guard, safe diagnostic helper, transport and CLI/client
+integration, two synthetic diagnostic test modules, and progress documentation.
+The public client's generic registration selector and home-relative paths are
+preserved. No AGP source, policy, machine configuration or runtime state is added.
+
+Publication checks cover credential patterns, private-key blocks, authentication
+values, private identifiers and known local credential values (compared only in
+memory, never printed). Authentication-related field names in tests refer only
+to synthetic fixtures; no real header values or runtime request bodies are added.
+Diagnostics pass only fixed categories and a fixed phase. Unrecognized causes
+remain unknown, and error responses still fail closed without retry or fallback.
+
+Focused diagnostic suite: **142 passed / 0 failed**, with synthetic fetch failures
+and no live service calls. Real ALLOW success and the live fetch root cause remain
+unverified. This audit does not certify production security.

@@ -11,6 +11,7 @@ import re
 import threading
 
 from agp_race_agent.solver import SolverError
+from latch_safe_diagnostic import SafeDiagnostic, FETCH_CATEGORIES
 
 _FAILURE = "Latch MCP request failed closed"
 
@@ -100,7 +101,8 @@ class OfflineMcpClient:
 
 
 class LatchMcpTransport:
-    def __init__(self, client=None, *, timeout_seconds=5.0):
+    def __init__(self, client=None, *, timeout_seconds=5.0, diagnostic=None):
+        self.diagnostic = diagnostic or SafeDiagnostic()
         if (type(timeout_seconds) not in {int, float}
                 or not math.isfinite(timeout_seconds) or timeout_seconds <= 0):
             raise ValueError("Invalid MCP timeout")
@@ -123,6 +125,7 @@ class LatchMcpTransport:
         return self._send(request, probe=False, allow_smoke=True)
 
     def _send(self, request, *, probe, allow_smoke=False):
+        self.diagnostic.stage('LOCAL_PRECHECK', 'LOCAL_GUARD')
         if not self._lock.acquire(blocking=False):
             raise SolverError(_FAILURE) from None
         try:
@@ -157,31 +160,52 @@ class LatchMcpTransport:
             client = self.client
 
             def dispatch():
+                self.diagnostic.mark('dispatch_started')
                 try:
                     result = client.call_tool("latch_authorize", arguments, timeout_seconds=timeout)
                     output.put((True, result))
-                except BaseException:
+                except BaseException as error:
                     # Never retain or forward client diagnostics/credentials.
+                    self.diagnostic.fail(error)
                     output.put((False, None))
 
             # A daemon worker bounds caller wait even for a noncooperative client.
             # Timeout cannot undo upstream execution. Never retry this transport
             # after timeout, and never consume its eventual late response.
+            self.diagnostic.stage('MCP_DISPATCH', 'LOCAL_GUARD')
             threading.Thread(target=dispatch, daemon=True).start()
             try:
                 ok, result = output.get(timeout=timeout)
             except queue.Empty:
                 self._timed_out = True
+                self.diagnostic.fail(TimeoutError(), timeout=True)
                 raise ValueError("MCP deadline exceeded") from None
             if not ok:
                 raise ValueError("MCP failed")
+            self.diagnostic.stage('MCP_RESPONSE', 'SCHEMA_MISMATCH')
+            # Match complete fixed server messages only; never print their text.
+            if type(result) is dict and result.get('isError') is True:
+                self.diagnostic.stage('MCP_RESPONSE', 'MCP_ERROR')
+                if result.get('content') == [{'type': 'text', 'text': 'Error: Request blocked'}]:
+                    self.diagnostic.stage('FETCH_GUARD', 'FETCH_BLOCKED')
+                elif result.get('content') == [{'type': 'text', 'text': 'Error: fetch failed'}]:
+                    self.diagnostic.stage('MCP_RESPONSE', 'FETCH_FAILED')
+                elif allow_smoke:
+                    for phase in ('AUTHORIZE', 'PROXY'):
+                        for category in FETCH_CATEGORIES:
+                            expected = [{'type': 'text', 'text': f'Error: LATCH_SAFE_FETCH:{phase}:{category}'}]
+                            if result.get('content') == expected:
+                                self.diagnostic.fetch_failure(phase, category)
             response = _decode(result)
             if probe or (not allow_smoke and type(client) is not OfflineMcpClient):
                 raise ValueError("Live success schema is unverified")
             return response
         except LatchDenied as denial:
+            self.diagnostic.stage('MCP_RESPONSE', 'POLICY_DENY')
+            self.diagnostic.fail(denial)
             raise denial from None
-        except Exception:
+        except Exception as error:
+            self.diagnostic.fail(error)
             raise SolverError(_FAILURE) from None
         finally:
             self._lock.release()
