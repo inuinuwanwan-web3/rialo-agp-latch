@@ -84,6 +84,9 @@ def _load_codex_agp(path: Path) -> dict[str, object]:
             if not found:
                 found = line.strip() == target
                 continue
+            if line.strip() == "[mcp_servers.agp-track-race.env]":
+                section.append("[server.env]\n")
+                continue
             if line.lstrip().startswith("["):
                 break
             section.append(line)

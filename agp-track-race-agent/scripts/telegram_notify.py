@@ -100,11 +100,43 @@ def relay(config):
         time.sleep(5)
 
 
+def test_once():
+    """Claim a separate DB test event durably before one shared send attempt."""
+    config = json.loads((PRIVATE / 'credentials.json').read_text())
+    # Existing DB only; no snapshots, production cursor, or notifier lock changes.
+    with sqlite3.connect(DATABASE.resolve().as_uri() + '?mode=rw', uri=True, timeout=10) as db:
+        db.execute('PRAGMA synchronous=FULL')
+        db.execute('BEGIN IMMEDIATE')
+        db.execute('''CREATE TABLE IF NOT EXISTS telegram_test_once (
+            id INTEGER PRIMARY KEY CHECK(id=1),
+            event TEXT NOT NULL CHECK(event='TELEGRAM_TEST'),
+            status TEXT NOT NULL CHECK(status IN ('attempted','accepted','unconfirmed')))
+        ''')
+        if db.execute('SELECT 1 FROM telegram_test_once WHERE id=1').fetchone():
+            print('TELEGRAM_TEST_ALREADY_ATTEMPTED; NO_DISPATCH', flush=True)
+            return
+        db.execute("INSERT INTO telegram_test_once VALUES (1, 'TELEGRAM_TEST', 'attempted')")
+        db.commit()
+        # A crash or ambiguous API failure permanently consumes this single attempt.
+        try:
+            send(config, 'AGP Watch TEST: Telegram notification path OK')
+        except Exception:
+            db.execute("UPDATE telegram_test_once SET status='unconfirmed' WHERE id=1")
+            db.commit()
+            raise RuntimeError('Telegram test delivery unconfirmed; no retry') from None
+        db.execute("UPDATE telegram_test_once SET status='accepted' WHERE id=1")
+        db.commit()
+        print('TELEGRAM_TEST_API_ACCEPTED; DISPATCH_COUNT=1', flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['setup', 'test', 'run'])
+    parser.add_argument('action', choices=['setup', 'test', 'run', 'test-once'])
     args = parser.parse_args()
     os.umask(0o077)
+    if args.action == 'test-once':
+        test_once()
+        return
     PRIVATE.mkdir(parents=True, exist_ok=True, mode=0o700)
     os.chmod(PRIVATE, 0o700)
     with (PRIVATE / 'notifier.lock').open('a') as lock:

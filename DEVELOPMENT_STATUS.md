@@ -135,3 +135,65 @@ secret values.
 Subsequent planned sequence: minimum AUTH fix → restore Watch active/running →
 confirm successful polling → confirm actual Telegram delivery → new-Track
 waiting READY. These steps were not performed as part of this record.
+
+
+## 2026-09-27: AGP Watch recovery and Telegram verification
+
+### Verified recovery
+
+- Fixed the AUTH loader to include `[mcp_servers.agp-track-race.env]` while
+  continuing to exclude other MCP tables. No credential was moved or copied.
+- Restored the deployed systemd Watch entry from `agp_race_agent.readonly_probe`
+  to the existing `agp_race_agent.track_watcher --execute` with the existing
+  configuration and observation database. Machine-specific service files and
+  private configuration are not included in this publication.
+- Watcher loop running: **YES**. Successful polls were confirmed in the current
+  session's audit database after the 14:46:38 JST restart.
+- Startup reported `READ_ONLY_WATCHER_STARTED; AUTO_JOIN_BLOCKED`.
+  Normal poll completion is recorded as `poll_end` in the audit database;
+  the watcher does not emit the probe's JSON `poll` success messages.
+- `AUTO_JOIN_BLOCKED` prevents automatic participation; it does not block
+  read-only observation, local observation records, or Telegram notifications.
+- The Watcher and running Telegram relay use the same `observations.sqlite3`:
+  the Watcher records `NEW_TRACK_DETECTED` in `snapshots`, and the relay selects
+  those rows after its production cursor. DB path and event/schema agree.
+
+### Safe one-shot Telegram test
+
+Added `telegram_notify.py test-once`, using a separate `telegram_test_once`
+ table in the existing observation database, the existing credential lookup,
+ and the shared Telegram `send()` implementation. The single test event is
+ durably claimed before dispatch. Failure, interruption, or repeated/concurrent
+ invocation cannot automatically retry a consumed attempt. Delivery can remain
+ unconfirmed after an interruption; this is an at-most-once dispatch mechanism.
+
+The test leaves production `snapshots`, Track data, and the production cursor
+untouched. It neither fabricates `NEW_TRACK_DETECTED` nor copies credentials.
+The normal Watcher and relay code paths remain unchanged; no service restart
+was needed for the test.
+
+- Offline validation: **75 passed / 0 failed** across Telegram, Track Watcher,
+  and Watch audit tests.
+- Authorized one-shot dispatch count: **1**.
+- Telegram API accepted: **YES**.
+- Expected message matched: **YES** —
+  `AGP Watch TEST: Telegram notification path OK`.
+- Retries: **0**; AGP writes: **0**; Latch live calls: **0**;
+  secrets exposed: **0**.
+- One-shot test result: **PASS**.
+- Test-state writes were confined to the dedicated test table; production
+  snapshots, cursor, and Track data were untouched by the test.
+
+### Scope and unverified items
+
+The one-shot test exercises a dedicated DB test claim and the existing Telegram
+credential/send path. It does **not** pass through the running relay's
+`NEW_TRACK_DETECTED` selection loop. API acceptance is not independent proof
+that a recipient read the message. Actual automatic notification triggered by a
+new real Track remains **unverified**.
+
+`start_track`, `ask`, `guess`, and `finish` were not executed in this recovery
+and notification verification work. The production write gate remains closed.
+No AGP writes, Latch live calls, or Telegram sends were performed for publication.
+Runtime databases, credentials, logs, caches, temporary files, wallet information,
+and machine-specific deployment files are excluded from the commit.
