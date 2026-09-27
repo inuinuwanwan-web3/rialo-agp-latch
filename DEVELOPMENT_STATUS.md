@@ -197,3 +197,56 @@ and notification verification work. The production write gate remains closed.
 No AGP writes, Latch live calls, or Telegram sends were performed for publication.
 Runtime databases, credentials, logs, caches, temporary files, wallet information,
 and machine-specific deployment files are excluded from the commit.
+
+
+## 2026-09-27: verified Latch Real ALLOW E2E
+
+### Verified result: E2E PASS
+
+Verified path: local client → Latch → ALLOW → OpenAI upstream → valid response.
+The existing Real ALLOW entry point completed successfully and reported
+`PASS`, `dispatch_count=1`, and `retries=0` after response validation.
+This completion record supersedes earlier pending/failed Real ALLOW status
+statements in this repository, including the README.
+
+- Live dispatch attempted: **YES**; dispatch count: **1**.
+- Latch reached: **YES**; Latch decision: **ALLOW**.
+- OpenAI upstream reached: **YES**.
+- Response received: **YES**; response valid: **YES**.
+- Retries: **0**; fallback: **NONE**.
+- AGP writes: **0**; Telegram dispatches: **0**; secrets exposed: **0**.
+- Second live request: **NO**.
+- Files modified by live execution: **NONE**.
+- Failure point: **NONE**.
+
+### Pre-live verification
+
+The actual Latch TIME_WINDOW was checked read-only: all days, 00:00–23:59,
+America/Los_Angeles. The outdated local weekday/business-hours restriction was
+aligned with that confirmed setting in the live workspace. The existing
+explicit import-path launch method resolved the local package import issue.
+No Latch policy or configuration was changed.
+
+- Pre-dispatch readiness: **READY**.
+- Offline tests: **184 passed / 0 failed**.
+- Offline/pre-dispatch execution used a mocked handshake and blocked the tool
+  request before writing it. Actual dispatches, Latch live calls, OpenAI upstream
+  calls, AGP writes, and Telegram dispatches during that verification: **0**.
+- The earlier read-only policy lookup was separate from the zero-call offline
+  verification; it was not a Real ALLOW/model request.
+
+### Completion boundary and remaining work
+
+The Latch Real ALLOW path is verified through real-environment E2E success.
+There is no need to resend Real ALLOW for the same verification purpose.
+
+Still unverified: real AGP `start_track`, `ask`, `guess`, `finish`, and production
+AGP E2E using a new Track. AGP production verification is deferred until a new
+Track appears; this record does not authorize production writes. Automatic
+Telegram notification triggered by a real new Track also remains unverified.
+
+This publication records the verified development result only. No additional
+live verification was run for publication. No response body, request headers,
+credentials, wallet information, runtime databases, logs, or caches are included.
+The live-workspace time-gate change and its tests are described here; this
+ documentation-only commit does not synchronize the public code snapshot.
