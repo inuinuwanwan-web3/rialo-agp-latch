@@ -1,0 +1,69 @@
+{
+  "phase": "8P",
+  "date": "2026-10-29",
+  "result": "PASS",
+  "scope": "Improved Telegram relay activation and one dedicated real delivery; automatic real-Track delivery not live-verified.",
+  "activation": {
+    "manual_telegram_restarts": 1,
+    "monitor_restarts": 0,
+    "activated_jst": "2026-10-29T20:49:57+09:00",
+    "queue_integrity": "ok",
+    "existing_snapshots_preserved": 979,
+    "protected_configuration_unchanged": true,
+    "last_post_activation_successful_poll_jst": "2026-10-29T20:50:12.231134+09:00"
+  },
+  "delivery": {
+    "http_status": 200,
+    "telegram_ok": true,
+    "message_id": 8,
+    "sent_jst": "2026-10-29T21:35:19+09:00",
+    "sent_utc": "2026-10-29T12:35:19+00:00",
+    "api_requests": 1,
+    "automatic_retries": 0,
+    "configured_destination_matched": true,
+    "authorized_text_matched": true,
+    "device_receipt_confirmed": true,
+    "device_receipt_source": "Explicit user confirmation in the Phase 8P GitHub publication request",
+    "device_receipt_timestamp": null,
+    "initial_harness_http_requests": 0,
+    "initial_harness_error": "TypeError in test instrumentation; fixed and verified offline before separately authorized actual send"
+  },
+  "state_preservation": {
+    "cursor_before": 39,
+    "cursor_after": 39,
+    "pending_new_events_before": 0,
+    "pending_new_events_after": 0,
+    "production_delivery_history_manually_changed": false,
+    "legacy_test_history_preserved": true,
+    "monitor_process_continued": true,
+    "notifier_process_continued_during_delivery": true,
+    "agp_auto_join": "BLOCKED"
+  },
+  "development_tests": {
+    "existing_passed": 475,
+    "added_passed": 24,
+    "unique_cases_passed": 499,
+    "remaining_failures": 0,
+    "virtual_24_hour_test": true
+  },
+  "publication_tests": "phase-8p-offline-tests-2026-10-29.json",
+  "files_sha256": {
+    "scripts/telegram_notify.py": "f924e50a668b3b7c010b1463043d712cbd6e7ad13fa03d508cc8a6688ad9043f",
+    "tests/test_telegram_notify.py": "7bb9a5b54f14f641aafb73beb033faba3558276d84e3d757055f807126981be6",
+    "scripts/verify_phase8p_offline.py": "04c48eb8ddbd1932c455ba72767dda018bc5d116126768cf24325c69e555c043"
+  },
+  "unverified": [
+    "Automatic real new-Track-triggered Telegram delivery",
+    "Real outage and 429 retry recovery",
+    "Post-upgrade PC reboot recovery",
+    "Independent Season/Tournament/rule announcement coverage"
+  ],
+  "publication_safety": {
+    "additional_telegram_sends": 0,
+    "service_restarts": 0,
+    "production_agp_writes": 0,
+    "windows_changes": 0,
+    "production_notification_state_changes": 0,
+    "raw_private_artifacts_included": false
+  }
+}

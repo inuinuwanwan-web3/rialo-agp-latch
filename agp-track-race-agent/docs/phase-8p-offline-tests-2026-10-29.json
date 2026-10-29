@@ -1,0 +1,14 @@
+{
+  "python": "3.12.3",
+  "pytest": "9.1.1",
+  "collected": 499,
+  "counts": {
+    "passed": 499
+  },
+  "exit_code": 0,
+  "seconds": 283.9196547099855,
+  "network_forbidden": true,
+  "synthetic_home": true,
+  "production_configuration_used": false,
+  "production_database_used": false
+}

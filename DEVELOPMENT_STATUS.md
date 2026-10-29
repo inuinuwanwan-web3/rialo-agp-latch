@@ -250,3 +250,17 @@ live verification was run for publication. No response body, request headers,
 credentials, wallet information, runtime databases, logs, or caches are included.
 The live-workspace time-gate change and its tests are described here; this
  documentation-only commit does not synchronize the public code snapshot.
+
+
+## 2026-10-29: Phase 8P Telegram reliability and real delivery
+
+The improved relay was activated with one Telegram-only restart; the AGP watcher
+continued without restart and participation remains BLOCKED. One authorized
+dedicated message returned HTTP 200 / ok=true / message_id 8 at 21:35:19 JST,
+and the user confirmed receipt on a smartphone. Cursor 39 and zero pending new
+Track events were preserved. No additional live operation was run for publication.
+
+See [the Phase 8P completion record](agp-track-race-agent/docs/phase-8p-completion-2026-10-29.md)
+for implementation, isolated tests, selected evidence, and remaining unverified
+items. Real new-Track-triggered delivery, live retry recovery, and PC reboot
+recovery after this upgrade remain unverified.
